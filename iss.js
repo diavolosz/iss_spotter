@@ -1,30 +1,29 @@
 
-
-
-
 const request = require("request");
 
-const fetchMyIP = function(callback) {
+//----------------------------------------------------------------------------------------
 
-  request("https://a11pi.ipify.org/?format=json", (error, response, body) => {
+const fetchMyIP = function(callback1) {
+
+  request("https://api.ipify.org/?format=json", (error, response, body) => {
 
     if (error) {
-      callback(error);
+      callback1(error);
       return;
     }
 
     if (response.statusCode !== 200) {
       const msg = `Status Code ${response.statusCode} when fetching IP. Response: ${body}`;
-      callback(Error(msg), null);
+      callback1(Error(msg), null);
       return;
     }
 
     const ip = JSON.parse(body).ip;
-    callback(null, ip);
+    callback1(null, ip);
   });
 };
 
-
+//----------------------------------------------------------------------------------------
 
 const fetchCoordsByIP = function(ip, callback) {
 
@@ -43,15 +42,15 @@ const fetchCoordsByIP = function(ip, callback) {
       return;
     }
 
-    let GeoCoor = {};
-    GeoCoor.latitude = JSON.parse(body).latitude;
-    GeoCoor.longitude = JSON.parse(body).longitude;
-    callback(null, GeoCoor);
+    let geoCoor = {};
+    geoCoor.latitude = JSON.parse(body).latitude;
+    geoCoor.longitude = JSON.parse(body).longitude;
+    callback(null, geoCoor);
   });
 };
 
-// { latitude: '49.27670', longitude: '-123.13000' }
 
+//----------------------------------------------------------------------------------------
 
 const fetchISSFlyOverTimes = function(geoCoor, callback) {
   
@@ -70,17 +69,35 @@ const fetchISSFlyOverTimes = function(geoCoor, callback) {
       return;
     }
 
-    let data = JSON.parse(body).response;
-
-    for (let flyover of data) {
-      let flyoverTime = {};
-      flyoverTime.risetime = flyover.risetime;
-      flyoverTime.duration = flyover.duration;
-      callback(null, flyoverTime);
-    }
+    const AllflyOverTime = JSON.parse(body).response;
+    callback(null, AllflyOverTime);
   });
 };
 
+//----------------------------------------------------------------------------------------
+
+const nextISSTimesForMyLocation = function(callback) {
+
+  fetchMyIP((error, ip) => {
+    if (error) {
+      return callback(error, null);
+    }
+
+    fetchCoordsByIP(ip, (error, loc) => {
+      if (error) {
+        return callback(error, null);
+      }
+
+      fetchISSFlyOverTimes(loc, (error, nextPasses) => {
+        if (error) {
+          return callback(error, null);
+        }
+
+        callback(null, nextPasses);
+      })
+    });
+  });
+}
 
 
 
@@ -94,5 +111,6 @@ const fetchISSFlyOverTimes = function(geoCoor, callback) {
 module.exports = {
   fetchMyIP,
   fetchCoordsByIP,
-  fetchISSFlyOverTimes
+  fetchISSFlyOverTimes,
+  nextISSTimesForMyLocation
 };
